@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Scanner</title>
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+
+    <style>
+        /* Основные стили */
+        body {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background-color: #f8f9fa;
+            color: #212529;
+        }
+    
+        h1 {
+            font-size: 24px;
+            font-weight: bold;
+            color: #343a40;
+            text-align: center;
+            padding: 20px 0;
+        }
+    
+        /* Фильтры */
+        #filters {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            background-color: #ffffff;
+            border-bottom: 1px solid #e9ecef;
+        }
+    
+        #filters label {
+            margin: 5px 10px;
+            font-size: 14px;
+            color: #495057;
+        }
+    
+        #filters input, #filters select {
+            padding: 8px;
+            font-size: 14px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            margin-right: 10px;
+            min-width: 150px;
+            max-width: 250px;
+        }
+    
+        /* Таблица */
+        table {
+            width: 75%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            background-color: #ffffff;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+    
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+    
+        th {
+            background-color: #f1f3f5;
+            font-size: 14px;
+            font-weight: bold;
+            color: #495057;
+            cursor: pointer;
+        }
+    
+        th.sorted-asc {
+            color: #007bff;
+        }
+    
+        th.sorted-desc {
+            color: #dc3545;
+        }
+    
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+    
+        tr:hover {
+            background-color: #e9ecef;
+        }
+    
+        /* Анимация */
+        .fadeInRow {
+            animation: fadeInRow 0.5s ease-in-out;
+        }
+    
+        @keyframes fadeInRow {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    
+        /* Сигналы */
+        .buy-signal {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+    
+        .sell-signal {
+            color: #F44336;
+            font-weight: bold;
+        }
+    
+        /* Футер */
+        footer {
+            text-align: center;
+            margin-top: auto;
+            padding: 10px 0;
+            background-color: #ffffff;
+            border-top: 1px solid #e9ecef;
+        }
+    
+        footer a {
+            color: #007bff;
+            text-decoration: none;
+            font-size: 18px;
+        }
+    
+        footer a:hover {
+            color: #0056b3;
+        }
+    
+        footer i {
+            margin-right: 8px;
+        }
+    
+        /* Пагинация */
+        .pagination-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+    
+        .pagination {
+            display: flex;
+            margin-right: 20px;
+        }
+    
+        .pagination button {
+            padding: 10px;
+            font-size: 14px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            margin: 0 5px;
+            cursor: pointer;
+        }
+    
+        .pagination button.disabled {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+        }
+    
+        .rows-selector {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+    
+        .rows-selector label {
+            margin-right: 10px;
+            font-size: 14px;
+            color: #495057;
+        }
+    
+        .rows-selector select {
+            padding: 8px;
+            font-size: 14px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+        }
+    
+        .page-numbers {
+            display: inline-flex;
+            align-items: center;
+            padding: 10px;
+            font-size: 14px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            margin: 0 5px;
+        }
+    
+        .page-numbers.active {
+            background-color: #007bff;
+            color: #fff;
+            font-weight: bold;
+        }
+
+        .page-numbers:hover {
+            background-color: #e9ecef;
+        }
+
+        .pagination button {
+            padding: 10px;
+            font-size: 14px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            margin: 0 5px;
+            cursor: pointer;
+        }
+
+        .pagination button.disabled {
+            background-color: #e9ecef;
+            cursor: not-allowed;
+        }
+
+        .pagination {
+            display: flex;
+            align-items: center; /* Выравнивание по вертикали */
+        }
+
+    
+        /* Адаптивные стили */
+        @media (max-width: 600px) {
+            #filters label {
+                margin: 5px 0;
+            }
+    
+            #filters input, #filters select {
+                width: 100%;
+                margin-right: 0;
+                margin-bottom: 10px;
+            }
+    
+            table {
+                width: 100%;
+            }
+        }
+    </style>    
+    
+</head>
+<body>
+    <h1>Market Scanner</h1>
+
+    <div id="filters">
+        <label for="symbolFilter">Ticker filter:</label>
+        <input type="text" id="symbolFilter" placeholder="Enter Ticker...">
+        
+        <label for="signalFilter">Signal filter:</label>
+        <input type="text" id="signalFilter" placeholder="Enter Signal...">
+
+    </div>
+
+    <div id="loadingMessage" class="loading">Loading...</div>
+
+    <table id="dataTable">
+        <thead>
+            <tr>
+                <th onclick="sortTable(0)">Ticker</th>
+                <th onclick="sortTable(1)">Timestamp</th>
+                <th onclick="sortTable(2)">Signal</th>
+                <th onclick="sortTable(3)">Stop loss</th>
+                <th onclick="sortTable(4)">Take profit</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <div id="paginationContainer" class="pagination-container">
+        <div class="pagination">
+            <button id="prevPage" onclick="changePage(-1)" class="disabled">Previous</button>
+            <span id="currentPageInfo" class="page-numbers">Page 1</span>
+            <button id="nextPage" onclick="changePage(1)">Next</button>
+        </div>
+        
+        <div id="rowsSelector" class="rows-selector">
+            <label for="rowsPerPage">Rows per page:</label>
+            <select id="rowsPerPage" onchange="updateRowsPerPage()">
+                <option value="20" selected>20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+        </div>
+    </div>   
+    
+    <footer>
+        <p>
+            <a href="https://github.com/ButovoButovo/crypto-radar" target="_blank" style="margin-right: 10px;">
+                <i class="fab fa-github"></i> GitHub
+            </a>
+            <a href="https://t.me/WannaBeAlfa" target="_blank">
+                <i class="fab fa-telegram-plane"></i> Telegram
+            </a>
+        </p>
+    </footer>
+
+    <script>
+        let marketData = [];
+        let currentPage = 1;
+        let rowsPerPage = 20;
+        let symbolFilterValue = '';  // Хранение значения фильтра для тикера
+        let signalFilterValue = '';  // Хранение значения фильтра для сигнала
+
+        function formatValue(value) {
+            if (typeof value !== 'number' || isNaN(value)) {
+                return 'Нет данных';
+            }
+
+            const decimalValue = value.toString().includes('e')
+                ? value.toFixed(20).replace(/0+$/, '')
+                : value.toString();
+
+            const match = /^0\.0*(\d)/.exec(decimalValue);
+            const decimalPlaces = match ? 3 + match[0].length - 3 : 3;
+
+            const regex = new RegExp(`^(\\d+\\.\\d{${decimalPlaces}})\\d*`);
+            const formatted = decimalValue.match(regex);
+
+            return formatted ? formatted[1] : decimalValue;
+        }
+
+        function updateTable(data) {
+            const tableBody = document.querySelector('#dataTable tbody');
+            tableBody.innerHTML = '';
+
+            data.forEach(rowData => {
+                const row = document.createElement('tr');
+                row.classList.add('fadeInRow');
+
+                const createCell = (text, className = '') => {
+                    const cell = document.createElement('td');
+                    cell.textContent = text || 'Нет данных';
+                    if (className) {
+                        cell.classList.add(className);
+                    }
+                    return cell;
+                };
+
+                const utcDate = new Date(rowData.timestamp);
+                const localDate = new Date(utcDate.getTime() - new Date().getTimezoneOffset() * 60000);
+                const formattedDate = localDate.toLocaleString();
+
+                row.appendChild(createCell(rowData.symbol));
+                row.appendChild(createCell(formattedDate));
+
+                const signal = rowData.signal.replace(/"/g, '').toUpperCase();
+                let signalClass = '';
+                if (signal === 'BUY') {
+                    signalClass = 'buy-signal';
+                } else if (signal === 'SELL') {
+                    signalClass = 'sell-signal';
+                }
+                row.appendChild(createCell(signal, signalClass));
+
+                row.appendChild(createCell(formatValue(rowData.stop_loss)));
+                row.appendChild(createCell(formatValue(rowData.take_profit)));
+
+                tableBody.appendChild(row);
+            });
+        }
+
+        async function fetchData() {
+            try {
+                const response = await fetch('/api/market-data/bybit');
+                const data = await response.json();
+
+                if (data.length === 0) {
+                    document.getElementById('loadingMessage').textContent = 'Данных нет.';
+                } else {
+                    document.getElementById('loadingMessage').style.display = 'none';
+                    marketData = data;
+                    applyFilters();  // Применяем фильтры после загрузки данных
+                    updateTable(getCurrentPageData());
+                    updatePaginationInfo();
+                }
+            } catch (error) {
+                console.error('Ошибка при получении данных:', error);
+                document.getElementById('loadingMessage').textContent = 'Ошибка при загрузке данных.';
+            }
+        }
+
+        // Применение фильтров
+        function applyFilters() {
+            const filteredData = marketData.filter(row => {
+                return (
+                    row.symbol.toLowerCase().includes(symbolFilterValue.toLowerCase()) &&
+                    row.signal.toLowerCase().includes(signalFilterValue.toLowerCase())
+                );
+            });
+
+            updateTable(filteredData);
+            updatePaginationInfo(); // Обновляем информацию о пагинации после применения фильтров
+        }
+
+        // Получение данных для текущей страницы с учётом фильтрации
+        function getCurrentPageData() {
+            const filteredData = marketData.filter(row => 
+                row.symbol.toLowerCase().includes(symbolFilterValue.toLowerCase()) &&
+                row.signal.toLowerCase().includes(signalFilterValue.toLowerCase())
+            );
+            const startIndex = (currentPage - 1) * rowsPerPage;
+            const endIndex = currentPage * rowsPerPage;
+            return filteredData.slice(startIndex, endIndex);
+        }
+
+        function updatePaginationInfo() {
+            const filteredData = marketData.filter(row => 
+                row.symbol.toLowerCase().includes(symbolFilterValue.toLowerCase()) &&
+                row.signal.toLowerCase().includes(signalFilterValue.toLowerCase())
+            );
+            const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+            document.getElementById('prevPage').classList.toggle('disabled', currentPage === 1);
+            document.getElementById('nextPage').classList.toggle('disabled', currentPage === totalPages);
+            document.getElementById('currentPageInfo').textContent = `Page ${currentPage} of ${totalPages}`;
+        }
+
+        // Переход между страницами
+        function changePage(direction) {
+            const filteredData = marketData.filter(row => 
+                row.symbol.toLowerCase().includes(symbolFilterValue.toLowerCase()) &&
+                row.signal.toLowerCase().includes(signalFilterValue.toLowerCase())
+            );
+            const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+
+            if (direction === -1 && currentPage > 1) {
+                currentPage--;
+            } else if (direction === 1 && currentPage < totalPages) {
+                currentPage++;
+            }
+
+            updateTable(getCurrentPageData());
+            updatePaginationInfo();
+        }
+
+        document.getElementById('rowsPerPage').addEventListener('change', (event) => {
+            rowsPerPage = parseInt(event.target.value, 10);
+            currentPage = 1; // Сбрасываем на первую страницу при изменении количества строк
+            applyFilters(); // Применяем фильтры
+            updateTable(getCurrentPageData());
+            updatePaginationInfo();
+        });
+
+        function sortTable(columnIndex) {
+            const rows = Array.from(document.querySelector('#dataTable tbody').rows);
+            const isAscending = document.querySelectorAll('th')[columnIndex].classList.contains('sorted-asc');
+    
+            rows.sort((rowA, rowB) => {
+                const cellA = rowA.cells[columnIndex].textContent;
+                const cellB = rowB.cells[columnIndex].textContent;
+    
+                if (isAscending) {
+                    return cellA < cellB ? -1 : 1;
+                }
+                return cellA < cellB ? 1 : -1;
+            });
+    
+            rows.forEach(row => document.querySelector('#dataTable tbody').appendChild(row));
+            document.querySelectorAll('th').forEach(th => th.classList.remove('sorted-asc', 'sorted-desc'));
+            document.querySelectorAll('th')[columnIndex].classList.add(isAscending ? 'sorted-desc' : 'sorted-asc');
+        }
+
+        // Функция для фильтрации данных
+        function filterData() {
+            symbolFilterValue = document.getElementById('symbolFilter').value;  // Сохраняем значение фильтра тикера
+            signalFilterValue = document.getElementById('signalFilter').value;  // Сохраняем значение фильтра сигнала
+            applyFilters(); // Применяем фильтры немедленно
+        }
+
+        document.getElementById('symbolFilter').addEventListener('input', filterData);
+        document.getElementById('signalFilter').addEventListener('input', filterData);
+
+        // Автоматическое обновление данных
+        setInterval(fetchData, 30000);  // Обновляем данные каждые 30 секунд
+
+        // Инициализация данных
+        fetchData();
+
+    </script>    
+    
+</body>
+</html>

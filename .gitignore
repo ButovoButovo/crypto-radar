@@ -1,0 +1,14 @@
+# Логи
+logs/
+*.log
+
+# Переменные окружения
+.env
+
+# Node.js модули
+node_modules/
+
+# Базы данных
+*.db
+signals.db
+
