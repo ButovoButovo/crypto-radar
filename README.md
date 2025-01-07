@@ -17,3 +17,50 @@
 - **JavaScript**: Dynamic functionality, including sorting, filtering, and pagination.
 - **FontAwesome**: For including icons (e.g., GitHub and Telegram links in the footer).
 - **Fetch API**: For retrieving market data from a remote API.
+
+---
+
+# Data Fetching Module
+
+This module is used to retrieve market data from an exchange via an API.
+
+## Market Data Source
+
+We utilize [ccxt](https://github.com/ccxt/ccxt), a universal library for interacting with various cryptocurrency exchanges.
+
+Currently, the data is fetched from **Bybit**, but the library supports over 100 exchanges, allowing you to switch to another one easily by modifying the configuration.
+
+### Data We Retrieve:
+
+1. **OHLCV (Candlestick Data)**  
+   - `Timestamp`: Time of the candle opening.  
+   - `Open`: Opening price.  
+   - `High`: Highest price.  
+   - `Low`: Lowest price.  
+   - `Close`: Closing price.  
+   - `Volume`: Trading volume.  
+
+   **Note:** We fetch the **latest 200 hourly candles** by default. This includes open, high, low, close, and volume data for the last 200 hours.
+
+2. **Available Trading Pairs (Symbols)**  
+   - We filter pairs ending with `/USDT`.
+
+3. **Parameters and Settings:**  
+   - Timeframes: `1m`, `5m`, `1h`, `1d`, etc.  
+   - Maximum number of candles: 200 (Bybit API limit).
+
+### API Keys
+
+Accessing data requires registering on Bybit and obtaining API keys. Ensure they are properly configured in the application.
+
+### Configuration Example:
+
+Make sure the following is set up in your `exchange` file:
+
+```javascript
+const ccxt = require('ccxt');
+const exchange = new ccxt.bybit({
+    apiKey: 'YOUR_API_KEY',
+    secret: 'YOUR_SECRET_KEY'
+});
+module.exports = exchange;
