@@ -198,3 +198,34 @@ Heikin-Ashi candles are a modification of regular Japanese candlesticks that smo
 ## Conclusion:
 
 The **BUY** and **SELL** signals are generated based on the combination of several indicators that provide more reliable and justified trading decisions. Using indicators such as **EMA**, **Bollinger Bands**, **Heikin-Ashi**, **ATR**, **VWAP**, and **linear regression** allows for considering different aspects of the market situation and minimizing the risk of making incorrect decisions.
+
+# Stop loss and Take profit logic
+
+The `calculateStopLossTakeProfit` function is designed to calculate the stop-loss and take-profit levels based on the signal (buy or sell), entry price, and ATR (Average True Range) indicator.
+
+## Parameters
+
+- **`signal`** (string): The type of trade signal. Can be:
+  - `'BUY'` — for calculating stop-loss and take-profit levels for a buy trade.
+  - `'SELL'` — for calculating levels for a sell trade.
+
+- **`entryPrice`** (number): The price at which the trade is entered.
+
+- **`atr`** (number): The ATR indicator value, which is used to determine market volatility. This parameter affects the calculation of stop-loss and take-profit levels.
+
+## Calculation Logic
+
+- For **BUY** signal:
+  - The stop-loss is calculated as `entryPrice - atr`.
+  - The take-profit is calculated as `entryPrice + atr`.
+
+- For **SELL** signal:
+  - The stop-loss is calculated as `entryPrice + atr`.
+  - The take-profit is calculated as `entryPrice - atr`.
+
+## Result
+
+The function returns an object with two properties:
+
+- **`stopLoss`** (number): The stop-loss level.
+- **`takeProfit`** (number): The take-profit level.
