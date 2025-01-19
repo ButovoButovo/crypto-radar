@@ -121,6 +121,16 @@
             color: #F44336;
             font-weight: bold;
         }
+        .positive-deviation {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .negative-deviation {
+            color: #F44336;
+            font-weight: bold;
+        }
+
     
         /* Футер */
         footer {
@@ -271,7 +281,10 @@
                 <th onclick="sortTable(1)">Timestamp</th>
                 <th onclick="sortTable(2)">Signal</th>
                 <th onclick="sortTable(3)">Stop loss</th>
-                <th onclick="sortTable(4)">Take profit</th>
+                <th onclick="sortTable(4)">Last Close Price</th>
+                <th onclick="sortTable(5)">Take profit</th>
+                <th onclick="sortTable(6)">Deviation Take profit</th>
+                <th onclick="sortTable(7)">Deviation Stop loss</th>
             </tr>
         </thead>
         <tbody></tbody>
@@ -330,45 +343,66 @@
             return formatted ? formatted[1] : decimalValue;
         }
 
-        function updateTable(data) {
-            const tableBody = document.querySelector('#dataTable tbody');
-            tableBody.innerHTML = '';
-
-            data.forEach(rowData => {
-                const row = document.createElement('tr');
-                row.classList.add('fadeInRow');
-
-                const createCell = (text, className = '') => {
-                    const cell = document.createElement('td');
-                    cell.textContent = text || 'Нет данных';
-                    if (className) {
-                        cell.classList.add(className);
-                    }
-                    return cell;
-                };
-
-                const utcDate = new Date(rowData.timestamp);
-                const localDate = new Date(utcDate.getTime() - new Date().getTimezoneOffset() * 60000);
-                const formattedDate = localDate.toLocaleString();
-
-                row.appendChild(createCell(rowData.symbol));
-                row.appendChild(createCell(formattedDate));
-
-                const signal = rowData.signal.replace(/"/g, '').toUpperCase();
-                let signalClass = '';
-                if (signal === 'BUY') {
-                    signalClass = 'buy-signal';
-                } else if (signal === 'SELL') {
-                    signalClass = 'sell-signal';
-                }
-                row.appendChild(createCell(signal, signalClass));
-
-                row.appendChild(createCell(formatValue(rowData.stop_loss)));
-                row.appendChild(createCell(formatValue(rowData.take_profit)));
-
-                tableBody.appendChild(row);
-            });
+        function calculateDeviation(currentValue, expectedValue) {
+        if (typeof currentValue !== 'number' || isNaN(currentValue) || typeof expectedValue !== 'number' || isNaN(expectedValue)) {
+            return 'Нет данных';
         }
+
+        // Считаем отклонение по модулю
+        const deviation = (Math.abs(currentValue - expectedValue) / expectedValue) * 100;
+        return deviation;
+    }
+
+    function updateTable(data) {
+        const tableBody = document.querySelector('#dataTable tbody');
+        tableBody.innerHTML = '';
+
+        data.forEach(rowData => {
+            const row = document.createElement('tr');
+            row.classList.add('fadeInRow');
+
+            const createCell = (text, className = '') => {
+                const cell = document.createElement('td');
+                cell.textContent = text || 'Нет данных';
+                if (className) {
+                    cell.classList.add(className);
+                }
+                return cell;
+            };
+
+            const utcDate = new Date(rowData.timestamp);
+            const localDate = new Date(utcDate.getTime() - new Date().getTimezoneOffset() * 60000);
+            const formattedDate = localDate.toLocaleString();
+
+            row.appendChild(createCell(rowData.symbol));
+            row.appendChild(createCell(formattedDate));
+
+            const signal = rowData.signal.replace(/"/g, '').toUpperCase();
+            let signalClass = '';
+            if (signal === 'BUY') {
+                signalClass = 'buy-signal';
+            } else if (signal === 'SELL') {
+                signalClass = 'sell-signal';
+            }
+            row.appendChild(createCell(signal, signalClass));
+
+            row.appendChild(createCell(formatValue(rowData.stop_loss)));
+            row.appendChild(createCell(formatValue(rowData.last_close_price)));
+            row.appendChild(createCell(formatValue(rowData.take_profit)));
+
+            // Рассчитываем отклонения
+            const takeProfitDeviation = calculateDeviation(rowData.last_close_price, rowData.take_profit);
+            const stopLossDeviation = calculateDeviation(rowData.last_close_price, rowData.stop_loss);
+
+            // Применяем стили для отклонений
+            row.appendChild(createCell(formatValue(takeProfitDeviation), 'positive-deviation'));  // зелёный
+            row.appendChild(createCell(formatValue(stopLossDeviation), 'negative-deviation'));   // красный
+
+            tableBody.appendChild(row);
+        });
+    }
+
+
 
         async function fetchData() {
             try {

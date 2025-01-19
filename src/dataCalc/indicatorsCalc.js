@@ -1,3 +1,4 @@
+//indicatorsCalc.js
 const technicalIndicators = require('technicalindicators'); // Библиотека для технических индикаторов
 const logger = require('../logging/logger'); // Модуль логирования (предположим, что у вас есть файл logger.js)
 const ss = require('simple-statistics'); // Библиотека для статистических вычислений

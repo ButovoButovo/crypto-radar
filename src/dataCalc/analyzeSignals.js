@@ -1,4 +1,3 @@
-// analyzeSignals.js
 const logger = require('../logging/logger'); // Модуль логирования (предположим, что у вас есть файл logger.js)
 
 const VOLATILITY_THRESHOLD = 0.01; // Константа для порога волатильности
@@ -6,9 +5,9 @@ const VOLATILITY_THRESHOLD = 0.01; // Константа для порога в�
 // Функция для анализа сигналов
 function analyzeSignals(symbol, indicators, closePrices) {
     // Проверка наличия данных
-    if (closePrices.length === 0 || indicators.atr.length === 0 || indicators.ema14.length === 0 || indicators.ema200.length === 0 || !indicators.bollingerBands.length || !indicators.vwap.length) {
+    if (closePrices.length === 0 || indicators.atr.length === 0 || indicators.ema14.length === 0 || indicators.ema200.length === 0 || !indicators.bollingerBands.length || !indicators.vwap.length || !indicators.heikinAshi.length) {
         logger.error(`[${symbol}] Недостаточно данных для анализа сигналов.`);
-        return { signal: 'NO_SIGNAL', atr: null, volatilityFilter: false, vwap: false };
+        return { signal: 'NO_SIGNAL', atr: null, volatilityFilter: false, vwap: false, heikinAshiConfirmation: false };
     }
 
     const latestClose = closePrices[closePrices.length - 1];
@@ -19,9 +18,15 @@ function analyzeSignals(symbol, indicators, closePrices) {
     const bollingerLower = indicators.bollingerBands[indicators.bollingerBands.length - 1]?.lower;
     const vwap = indicators.vwap[indicators.vwap.length - 1];
 
+    // Получаем последнюю свечу Хайканаши
+    const latestHeikinAshi = indicators.heikinAshi[indicators.heikinAshi.length - 1];
+    const isBullishHeikinAshi = latestHeikinAshi.haClose > latestHeikinAshi.haOpen; // Бычья свеча
+    const isBearishHeikinAshi = latestHeikinAshi.haClose < latestHeikinAshi.haOpen; // Медвежья свеча
+
     // Логирование значений
     logger.info(`[${symbol}] Цена закрытия: ${latestClose}, ATR: ${lastATR}, EMA14: ${lastEMA14}, EMA200: ${lastEMA200}, VWAP: ${vwap}`);
     logger.info(`[${symbol}] Линии Боллинджера: Верхняя ${bollingerUpper}, Нижняя ${bollingerLower}`);
+    logger.info(`[${symbol}] Хайканаши - Open: ${latestHeikinAshi.haOpen}, Close: ${latestHeikinAshi.haClose}, High: ${latestHeikinAshi.haHigh}, Low: ${latestHeikinAshi.haLow}`);
 
     // Проверка на волатильность
     const volatilityFilter = lastATR > (latestClose * VOLATILITY_THRESHOLD);
@@ -36,14 +41,14 @@ function analyzeSignals(symbol, indicators, closePrices) {
 
     // Логика для EMA
     if (lastEMA14 > lastEMA200) {
-        if (latestClose > lastEMA14 && vwapFilter) {
+        if (latestClose > lastEMA14 && vwapFilter && isBullishHeikinAshi) {
             signal = 'BUY';
-            logger.info(`[${symbol}] Сигнал BUY по EMA14 > EMA200 и VWAP.`);
+            logger.info(`[${symbol}] Сигнал BUY по EMA14 > EMA200, выше VWAP и подтверждение по Хайканаши и VWAP.`);
         }
     } else if (lastEMA14 < lastEMA200) {
-        if (latestClose < lastEMA14 && !vwapFilter) {
+        if (latestClose < lastEMA14 && !vwapFilter && isBearishHeikinAshi) {
             signal = 'SELL';
-            logger.info(`[${symbol}] Сигнал SELL по EMA14 < EMA200 и VWAP.`);
+            logger.info(`[${symbol}] Сигнал SELL по EMA14 < EMA200, ниже VWAP и подтверждение по Хайканаши и VWAP.`);
         }
     }
 
@@ -62,7 +67,7 @@ function analyzeSignals(symbol, indicators, closePrices) {
 
     if (regressionSlope === undefined || regression === null) {
         logger.error(`[${symbol}] Наклон линейной регрессии неопределен или regression объект отсутствует.`);
-        return { signal: 'NO_SIGNAL', atr: lastATR, volatilityFilter: false, vwap: false };
+        return { signal: 'NO_SIGNAL', atr: lastATR, volatilityFilter: false, vwap: false, heikinAshiConfirmation: false };
     }
     logger.info(`[${symbol}] Наклон линейной регрессии: ${regressionSlope}`);
 
@@ -85,9 +90,7 @@ function analyzeSignals(symbol, indicators, closePrices) {
 
     // Итоговый сигнал
     logger.info(`[${symbol}] Итоговый сигнал: ${signal}`);
-    return { signal, atr: lastATR, volatilityFilter, vwap };
+    return { signal, atr: lastATR, volatilityFilter, vwap, heikinAshiConfirmation: isBullishHeikinAshi || isBearishHeikinAshi };
 }
 
 module.exports = { analyzeSignals };
-
-

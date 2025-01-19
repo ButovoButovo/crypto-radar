@@ -7,14 +7,14 @@ const { saveSignals } = require('../db/saveSignals');// Импортируем �
 
 async function processSignal(symbol) {
     try {
-        // Получаем данные OHLCV и объемы
+        // Получаем данные OHLCV и volumes
         const { ohlcv, volumes } = await fetchOHLCV(symbol);
-        
+
         // Рассчитываем индикаторы
         const indicators = await indicatorsCalc(ohlcv, volumes);
-        
+
         // Анализируем сигналы
-        const { signal, atr, volatilityFilter, vwap } = analyzeSignals(symbol, indicators, ohlcv.map(candle => candle[4]));
+        const { signal, atr, volatilityFilter, vwap } = analyzeSignals(symbol, indicators, ohlcv.map(c => c[4]));
 
         // Проверка на наличие сигнала
         if (!signal || signal === 'NO_SIGNAL') {
@@ -28,7 +28,7 @@ async function processSignal(symbol) {
             return;
         }
 
-        // Добавляем фильтрацию по волатильности
+        // Проверка на наличие волатильности
         if (!volatilityFilter) {
             logger.info(`Сигнал для ${symbol} отклонён из-за низкой волатильности.`);
             return;
@@ -37,30 +37,31 @@ async function processSignal(symbol) {
         // Логируем использование VWAP
         logger.info(`Последний VWAP для ${symbol}: ${vwap}`);
 
-        // Проверка на наличие последней цены закрытия
+        // Получаем последнюю цену закрытия из ohlcv
         const lastClosePrice = ohlcv.length > 0 ? ohlcv[ohlcv.length - 1][4] : null;
-
         if (lastClosePrice === null) {
-            logger.error(`Ошибка: нет данных о последней цене закрытия для ${symbol}`);
+            logger.error(`Нет данных о последней цене закрытия для ${symbol}`);
             return;
         }
 
         // Расчёт стоп-лосса и тейк-профита
         const stopLossTakeProfit = calculateStopLossTakeProfit(signal, lastClosePrice, atr);
+        logger.info(`Сигнал: ${signal}, StopLoss: ${stopLossTakeProfit.stopLoss}, TakeProfit: ${stopLossTakeProfit.takeProfit}`);
 
-        // Логируем сигнал и параметры
-        logger.info(`Обрабатываем сигнал для ${symbol}. Сигнал: ${signal}, StopLoss: ${stopLossTakeProfit.stopLoss}, TakeProfit: ${stopLossTakeProfit.takeProfit}`);
-
-        // Сохранение сигнала
-        try {
-            saveSignals(symbol, signal, stopLossTakeProfit.stopLoss, stopLossTakeProfit.takeProfit);
-            logger.info(`Сигнал для ${symbol} сохранён успешно.`);
-        } catch (saveError) {
-            logger.error(`Ошибка при сохранении сигнала для ${symbol}: ${saveError.message}`);
+        // Проверка на наличие массива volumes и его длины
+        if (!Array.isArray(volumes) || volumes.length === 0) {
+            logger.warn(`Массив volumes пуст или не определён, сигнал для ${symbol} не сохранён.`);
+            return;
         }
-        
+
+        // Получаем последний элемент массива volumes
+        const lastVolume = volumes[volumes.length - 1];
+
+        // Сохраняем сигнал с последним объёмом и последней ценой закрытия
+        await saveSignals(symbol, signal, stopLossTakeProfit.stopLoss, stopLossTakeProfit.takeProfit, lastClosePrice, lastVolume);
+        logger.info(`Сигнал для ${symbol} сохранён успешно.`);
     } catch (error) {
-        logger.error(`Ошибка обработки сигнала ${symbol}: ${error.message}`);
+        logger.error(`Ошибка обработки сигнала для ${symbol}: ${error.message}\n${error.stack}`);
     }
 }
 

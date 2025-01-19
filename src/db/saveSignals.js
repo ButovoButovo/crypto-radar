@@ -16,65 +16,64 @@ const runQuery = (db, query, params) => {
     });
 };
 
-// Функция для инициализации базы данных и создания таблицы
+// Функция для инициализации базы данных
 const initDB = () => {
-    return new Promise((resolve, reject) => {
-        const db = new sqlite3.Database(dbPath, (err) => {
-            if (err) {
-                logger.error(`Ошибка подключения к базе данных: ${err.message}`);
-                return reject(err);
-            }
-            logger.info('Подключение к базе данных успешно установлено.');
-        });
-
-        const createSignalsTable = `
-            CREATE TABLE IF NOT EXISTS signals (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                symbol TEXT NOT NULL,
-                signal TEXT NOT NULL,
-                stop_loss REAL,
-                take_profit REAL,
-                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-            );
-        `;
-
-        db.run(createSignalsTable, (err) => {
-            if (err) {
-                logger.error(`Ошибка создания таблицы: ${err.message}`);
-                return reject(err);
-            }
-            logger.info('Таблица сигналов успешно создана или уже существует.');
-            resolve(db); // Возвращаем объект базы данных для дальнейшего использования
-        });
+    const db = new sqlite3.Database(dbPath, (err) => {
+        if (err) {
+            logger.error(`Ошибка подключения к базе данных: ${err.message}`);
+            throw err;
+        }
+        logger.info('Подключение к базе данных успешно установлено.');
     });
+    return db;
+};
+
+// Функция для создания таблицы
+const createSignalsTable = (db) => {
+    const query = `
+    CREATE TABLE IF NOT EXISTS signals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        symbol TEXT NOT NULL,
+        signal TEXT NOT NULL,
+        stop_loss REAL,
+        last_close_price REAL,
+        take_profit REAL,
+        volumes TEXT,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    `;
+    return runQuery(db, query, []);
 };
 
 // Функция для сохранения сигнала в базу данных
-async function saveSignals(symbol, signals, stopLoss, takeProfit) {
+async function saveSignals(symbol, signals, stopLoss, takeProfit, lastClosePrice, volumes) {
     let db;
     try {
-        // Инициализация базы данных и получение соединения
-        db = await initDB();
+        // Инициализация базы данных и создание таблицы, если требуется
+        db = initDB();
+        await createSignalsTable(db);
 
         // Запрос на добавление сигнала
-        const query = `INSERT INTO signals (symbol, signal, stop_loss, take_profit) VALUES (?, ?, ?, ?);`;
-        await runQuery(db, query, [symbol, JSON.stringify(signals), stopLoss, takeProfit]);
+        const query = `INSERT INTO signals (symbol, signal, stop_loss, take_profit, last_close_price, volumes) VALUES (?, ?, ?, ?, ?, ?);`;
+        await runQuery(db, query, [symbol, JSON.stringify(signals), stopLoss, takeProfit, lastClosePrice, JSON.stringify(volumes)]);
 
         logger.info(`Сигнал для ${symbol} успешно сохранён в базу данных.`);
     } catch (err) {
         logger.error(`Ошибка при обработке сигнала для ${symbol}: ${err.message}`);
     } finally {
         if (db) {
-            // Ожидаем закрытия базы данных только после выполнения всех операций
-            db.close((err) => {
-                if (err) {
-                    logger.error(`Ошибка закрытия базы данных: ${err.message}`);
-                } else {
+            await new Promise((resolve, reject) => {
+                db.close((err) => {
+                    if (err) {
+                        logger.error(`Ошибка закрытия базы данных: ${err.message}`);
+                        return reject(err);
+                    }
                     logger.info('Соединение с базой данных закрыто.');
-                }
+                    resolve();
+                });
             });
         }
     }
 }
 
-module.exports = { saveSignals };  // Экспортируем функцию для использования в других файлах
+module.exports = { saveSignals };

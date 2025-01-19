@@ -28,6 +28,8 @@ async function fetchOHLCV(symbol, timeframe = '1h', limit = 200) {
         // Извлечение объемов (если структура данных правильная)
         const volumes = ohlcv.map(candle => candle[5]);
 
+        logger.debug(JSON.stringify(volumes));
+
         logger.info(`Данные OHLCV для ${symbol} успешно получены.`);
         return { ohlcv, volumes };
     } catch (error) {

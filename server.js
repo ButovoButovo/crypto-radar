@@ -64,7 +64,7 @@ setInterval(async () => {
 }, updateSymbolsInterval);
 
 // Периодическое выполнение мониторинга
-const monitoringInterval = 60 * 1000*10; // 600 секунд
+const monitoringInterval = 20 * 1000; // 600 секунд
 setInterval(async () => {
     await monitorMarkets();
 }, monitoringInterval);
@@ -72,12 +72,12 @@ setInterval(async () => {
 // Маршрут для получения данных из базы данных для визуализации
 app.get('/api/market-data/bybit', (req, res) => {
     const query = `
-        WITH RankedSignals AS (
-            SELECT symbol, signal, stop_loss, take_profit, timestamp,
+        WITH RankedSignals AS ( 
+            SELECT symbol, signal, stop_loss, take_profit, last_close_price, volumes, timestamp,
                 ROW_NUMBER() OVER (PARTITION BY symbol ORDER BY timestamp DESC) AS row_num
             FROM signals
         )
-        SELECT symbol, signal, stop_loss, take_profit, timestamp
+        SELECT symbol, signal, stop_loss, take_profit, last_close_price, volumes, timestamp
         FROM RankedSignals
         WHERE row_num = 1;
     `;
